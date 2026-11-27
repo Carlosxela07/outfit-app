@@ -101,6 +101,33 @@ void main() {
     expect((await repository.watchAll().first).single.id, shoesId);
   });
 
+  test('watchItems lists garments from newest to oldest', () async {
+    for (final (id, date) in [
+      ('a', DateTime.utc(2026, 10, 1)),
+      ('c', DateTime.utc(2026, 10, 3)),
+      ('b', DateTime.utc(2026, 10, 4)),
+    ]) {
+      await database
+          .into(database.garments)
+          .insert(
+            GarmentsCompanion.insert(
+              id: id,
+              category: top.category,
+              subtype: top.subtype,
+              formality: top.formality,
+              primaryColor: top.primaryColor,
+              colorFamily: top.colorFamily,
+              photoPath: top.photoPath,
+              createdAt: date,
+              updatedAt: date,
+            ),
+          );
+    }
+
+    final items = await repository.watchItems().first;
+    expect(items.map((item) => item.garment.id), ['b', 'c', 'a']);
+  });
+
   test(
     'update writes nullable fields and preserves the photo and creation time',
     () async {

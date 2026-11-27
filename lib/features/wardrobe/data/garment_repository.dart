@@ -1,10 +1,16 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:outfit_engine/outfit_engine.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/db/app_database.dart';
+import '../../../core/db/app_database_provider.dart';
+
+final garmentRepositoryProvider = Provider<GarmentRepository>(
+  (ref) => GarmentRepository(ref.watch(appDatabaseProvider)),
+);
 
 class GarmentDraft {
   const GarmentDraft({
@@ -47,7 +53,7 @@ class GarmentRepository {
 
   Stream<List<WardrobeItem>> watchItems({GarmentCategory? category}) {
     final query = _database.select(_database.garments)
-      ..orderBy([(row) => OrderingTerm.asc(row.id)]);
+      ..orderBy([(row) => OrderingTerm.desc(row.createdAt)]);
     if (category != null) {
       query.where((row) => row.category.equalsValue(category));
     }
