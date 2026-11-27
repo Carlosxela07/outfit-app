@@ -1,30 +1,31 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-
-import 'package:outfit_app/main.dart';
+import 'package:outfit_app/app/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Starts on Hoy and opens all four tabs', (tester) async {
+    await tester.pumpWidget(const ProviderScope(child: App()));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    final navigationBar = find.byType(NavigationBar);
+    final appBar = find.byType(AppBar);
+    expect(tester.widget<NavigationBar>(navigationBar).selectedIndex, 0);
+    expect(
+      find.descendant(of: appBar, matching: find.text('Hoy')),
+      findsOneWidget,
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    for (final label in ['Clóset', 'Qué me falta', 'Ajustes', 'Hoy']) {
+      await tester.tap(
+        find.descendant(of: navigationBar, matching: find.text(label)),
+      );
+      await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      expect(
+        find.descendant(of: appBar, matching: find.text(label)),
+        findsOneWidget,
+      );
+    }
   });
 }
