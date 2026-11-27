@@ -2,10 +2,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:outfit_app/app/app.dart';
+import 'package:outfit_app/features/wardrobe/application/wardrobe_providers.dart';
 
 void main() {
   testWidgets('Starts on Hoy and opens all four tabs', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: App()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          wardrobeItemsProvider(null).overrideWith((ref) => Stream.value([])),
+        ],
+        child: const App(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     final navigationBar = find.byType(NavigationBar);
