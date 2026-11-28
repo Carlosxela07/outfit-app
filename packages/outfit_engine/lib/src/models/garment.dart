@@ -9,6 +9,9 @@ final class Garment {
     required this.formality,
     required this.primaryColor,
     required this.colorFamily,
+    this.secondaryColor,
+    this.secondaryColorFamily,
+    this.pattern = GarmentPattern.solid,
     this.fit,
     this.warmth,
     this.lastWornAt,
@@ -22,6 +25,9 @@ final class Garment {
   final int formality;
   final int primaryColor;
   final ColorFamily colorFamily;
+  final int? secondaryColor;
+  final ColorFamily? secondaryColorFamily;
+  final GarmentPattern pattern;
   final Fit? fit;
   final Warmth? warmth;
   final DateTime? lastWornAt;
@@ -35,6 +41,9 @@ final class Garment {
     int? formality,
     int? primaryColor,
     ColorFamily? colorFamily,
+    Object? secondaryColor = CopyWithValue.unchanged,
+    Object? secondaryColorFamily = CopyWithValue.unchanged,
+    GarmentPattern? pattern,
     Object? fit = CopyWithValue.unchanged,
     Object? warmth = CopyWithValue.unchanged,
     Object? lastWornAt = CopyWithValue.unchanged,
@@ -48,6 +57,13 @@ final class Garment {
       formality: formality ?? this.formality,
       primaryColor: primaryColor ?? this.primaryColor,
       colorFamily: colorFamily ?? this.colorFamily,
+      secondaryColor: secondaryColor == CopyWithValue.unchanged
+          ? this.secondaryColor
+          : secondaryColor as int?,
+      secondaryColorFamily: secondaryColorFamily == CopyWithValue.unchanged
+          ? this.secondaryColorFamily
+          : secondaryColorFamily as ColorFamily?,
+      pattern: pattern ?? this.pattern,
       fit: fit == CopyWithValue.unchanged ? this.fit : fit as Fit?,
       warmth: warmth == CopyWithValue.unchanged
           ? this.warmth
@@ -70,6 +86,9 @@ final class Garment {
           formality == other.formality &&
           primaryColor == other.primaryColor &&
           colorFamily == other.colorFamily &&
+          secondaryColor == other.secondaryColor &&
+          secondaryColorFamily == other.secondaryColorFamily &&
+          pattern == other.pattern &&
           fit == other.fit &&
           warmth == other.warmth &&
           lastWornAt == other.lastWornAt &&
@@ -84,6 +103,9 @@ final class Garment {
     formality,
     primaryColor,
     colorFamily,
+    secondaryColor,
+    secondaryColorFamily,
+    pattern,
     fit,
     warmth,
     lastWornAt,
