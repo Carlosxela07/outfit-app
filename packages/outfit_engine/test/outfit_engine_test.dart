@@ -30,6 +30,30 @@ void main() {
       expect(shirt.copyWith(fit: null, warmth: null).warmth, isNull);
     });
 
+    test('copies and compares multicolor and pattern fields', () {
+      expect(shirt.pattern, GarmentPattern.solid);
+      expect(shirt.secondaryColor, isNull);
+      expect(shirt.secondaryColorFamily, isNull);
+      final graphic = shirt.copyWith(
+        secondaryColor: 0xff4169e1,
+        secondaryColorFamily: ColorFamily.cool,
+        pattern: GarmentPattern.graphic,
+      );
+      expect(graphic.copyWith(), graphic);
+      expect(graphic.copyWith().hashCode, graphic.hashCode);
+      expect(graphic.copyWith(secondaryColor: null), isNot(graphic));
+      expect(graphic.copyWith(secondaryColorFamily: null), isNot(graphic));
+      expect(graphic.copyWith(pattern: GarmentPattern.solid), isNot(graphic));
+      expect(
+        graphic.copyWith(
+          secondaryColor: null,
+          secondaryColorFamily: null,
+          pattern: GarmentPattern.solid,
+        ),
+        shirt,
+      );
+    });
+
     test('asserts formality is in range', () {
       expect(
         () => shirt.copyWith(formality: 0),
@@ -52,7 +76,13 @@ void main() {
       'beige': (0xffe2c9a7, ColorFamily.neutral),
       'red': (0xffb52e32, ColorFamily.warm),
       'orange': (0xffff8000, ColorFamily.accent),
-      'navy': (0xff000080, ColorFamily.cool),
+      'navy': (0xff1f2a44, ColorFamily.neutral),
+      'denim': (0xff3b5b8c, ColorFamily.neutral),
+      'brown': (0xff5c4033, ColorFamily.neutral),
+      'olive': (0xff556b2f, ColorFamily.neutral),
+      'khaki': (0xffc3b091, ColorFamily.neutral),
+      'royal blue': (0xff4169e1, ColorFamily.cool),
+      'mustard': (0xffd4a017, ColorFamily.warm),
       'neon green': (0xff39ff14, ColorFamily.accent),
       'blue with transparent alpha': (0x00000080, ColorFamily.cool),
     };
@@ -81,7 +111,9 @@ void main() {
 
     test('copies weights and compares them independently of key order', () {
       final original = predefinedStyles.first;
-      final weights = {'color': 1.0, 'formality': 1.0};
+      final weights = Map<String, double>.fromEntries(
+        original.ruleWeights.entries.toList().reversed,
+      );
       final copy = original.copyWith(ruleWeights: weights);
       weights['color'] = 2.0;
       expect(copy, original);

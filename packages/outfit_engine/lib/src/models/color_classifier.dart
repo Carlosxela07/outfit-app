@@ -32,7 +32,17 @@ ColorFamily classifyColor(int argb) {
     hueSector = (red - green) / chroma + 4;
   }
 
-  // Red through yellow is warm ([330, 360) or [0, 70) degrees).
   final hue = (hueSector * 60) % 360;
+  // Muted blues (200–235°) include navy and denim below 60% value.
+  final mutedBlue =
+      hue >= 200 && hue <= 235 && value <= 0.60 && saturation <= 0.65;
+  // Browns are dark oranges; khaki is a less saturated orange or yellow.
+  final brown = hue >= 10 && hue <= 50 && value <= 0.45 && saturation <= 0.65;
+  final khaki = hue >= 25 && hue <= 55 && saturation <= 0.32;
+  // Olive is a dark yellow-green (55–100°).
+  final olive = hue >= 55 && hue <= 100 && value <= 0.50 && saturation <= 0.70;
+  if (mutedBlue || brown || khaki || olive) return ColorFamily.neutral;
+
+  // Red through yellow is warm ([330, 360) or [0, 70) degrees).
   return hue >= 330 || hue < 70 ? ColorFamily.warm : ColorFamily.cool;
 }
