@@ -69,14 +69,14 @@ class GarmentRepository {
     return row == null ? null : _toItem(row);
   }
 
-  Future<String> add(GarmentDraft draft) async {
-    final id = _uuid.v4();
+  Future<String> add(GarmentDraft draft, {String? id}) async {
+    final garmentId = id ?? _uuid.v4();
     final now = DateTime.now().toUtc();
     await _database
         .into(_database.garments)
         .insert(
           GarmentsCompanion.insert(
-            id: id,
+            id: garmentId,
             category: draft.category,
             subtype: draft.subtype,
             formality: draft.formality,
@@ -89,7 +89,7 @@ class GarmentRepository {
             updatedAt: now,
           ),
         );
-    return id;
+    return garmentId;
   }
 
   Future<void> update(Garment garment) async {
@@ -112,11 +112,13 @@ class GarmentRepository {
     );
   }
 
-  Future<void> delete(String id) async {
-    final query = _database.delete(_database.garments)
-      ..where((row) => row.id.equals(id));
-    await query.go();
-  }
+  Future<void> delete(String id, {Future<void> Function()? deletePhoto}) =>
+      _database.transaction(() async {
+        final query = _database.delete(_database.garments)
+          ..where((row) => row.id.equals(id));
+        await query.go();
+        await deletePhoto?.call();
+      });
 
   Future<void> markWorn(List<String> ids, DateTime when) async {
     final garmentIds = ids.toSet();
