@@ -104,6 +104,49 @@ void main() {
     );
   });
 
+  test(
+    'solid garments use their secondary colors without becoming protagonists',
+    () {
+      const rule = ColorRule();
+      final twoToneNeutral = top.copyWith(
+        secondaryColor: 0xffeeeeee,
+        secondaryColorFamily: ColorFamily.neutral,
+      );
+      expect(evaluate(rule, upper: twoToneNeutral).score, 0.8);
+      expect(
+        evaluate(
+          rule,
+          upper: twoToneNeutral,
+          lower: bottom.copyWith(pattern: GarmentPattern.stripes),
+        ).reason,
+        'Una sola prenda protagonista, el resto la acompaña',
+      );
+      final twoToneWarm = top.copyWith(
+        colorFamily: ColorFamily.warm,
+        secondaryColor: 0xff20385e,
+        secondaryColorFamily: ColorFamily.cool,
+      );
+      expect(
+        evaluate(
+          rule,
+          upper: twoToneWarm,
+          lower: bottom.copyWith(colorFamily: ColorFamily.warm),
+          footwear: shoes.copyWith(colorFamily: ColorFamily.warm),
+        ).score,
+        0.55,
+      );
+      expect(
+        evaluate(
+          rule,
+          upper: twoToneWarm.copyWith(secondaryColorFamily: ColorFamily.warm),
+          lower: bottom.copyWith(colorFamily: ColorFamily.warm),
+          footwear: shoes.copyWith(colorFamily: ColorFamily.warm),
+        ).score,
+        0.85,
+      );
+    },
+  );
+
   test('volume rewards contrasting fits and handles missing fits', () {
     const rule = VolumeRule();
     final loose = top.copyWith(fit: Fit.loose);

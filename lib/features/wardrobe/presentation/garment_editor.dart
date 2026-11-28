@@ -8,9 +8,9 @@ import 'package:outfit_engine/outfit_engine.dart';
 import '../../../core/storage/dominant_color.dart';
 import '../application/wardrobe_providers.dart';
 import '../data/garment_repository.dart';
+import 'garment_color_picker.dart';
 import 'garment_fields.dart';
 import 'garment_options.dart';
-import 'garment_photo.dart';
 
 class GarmentEditor extends ConsumerStatefulWidget {
   const GarmentEditor.add(XFile this.photo, {super.key}) : item = null;
@@ -28,10 +28,14 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
   String _subtype = '';
   int _formality = 2;
   int _color = defaultGarmentColor;
+  int? _secondaryColor;
+  GarmentPattern _pattern = GarmentPattern.solid;
   Fit? _fit;
   Warmth? _warmth;
   bool _busy = false;
+  bool _samplingPrimary = false;
   bool _colorChosen = false;
+  bool _secondaryChosen = false;
   Future<void>? _colorDetection;
 
   @override
@@ -45,6 +49,8 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
       _subtype = garment.subtype;
       _formality = garment.formality;
       _color = garment.primaryColor;
+      _secondaryColor = garment.secondaryColor;
+      _pattern = garment.pattern;
       _fit = garment.fit;
       _warmth = garment.warmth;
     }
@@ -52,10 +58,14 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
 
   Future<void> _detectColor(XFile photo) async {
     try {
-      final color = await ref
+      final colors = await ref
           .read(garmentPhotosProvider)
-          .detectColor(photo.path);
-      if (mounted && !_colorChosen) setState(() => _color = color);
+          .detectPhotoColors(photo.path);
+      if (!mounted) return;
+      setState(() {
+        if (!_colorChosen) _color = colors.primary;
+        if (!_secondaryChosen) _secondaryColor = colors.secondary;
+      });
     } on Exception {
       // Use the default color if the photo cannot be sampled.
     }
@@ -63,10 +73,14 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
 
   Future<void> _save() async {
     final category = _category;
-    if (category == null || _busy) return;
+    if (category == null || _busy || _samplingPrimary) return;
 
     await _submit((actions) async {
-      if (!_colorChosen) await _colorDetection;
+      await _colorDetection;
+      final secondary = _secondaryColor;
+      final secondaryFamily = secondary == null
+          ? null
+          : classifyColor(secondary);
       final family = classifyColor(_color);
       final garment = widget.item?.garment;
       if (garment == null) {
@@ -77,6 +91,9 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
             formality: _formality,
             primaryColor: _color,
             colorFamily: family,
+            secondaryColor: secondary,
+            secondaryColorFamily: secondaryFamily,
+            pattern: _pattern,
             photoPath: widget.photo!.path,
             fit: _fit,
             warmth: _warmth,
@@ -90,6 +107,9 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
             formality: _formality,
             primaryColor: _color,
             colorFamily: family,
+            secondaryColor: secondary,
+            secondaryColorFamily: secondaryFamily,
+            pattern: _pattern,
             fit: _fit,
             warmth: _warmth,
           ),
@@ -97,6 +117,16 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
       }
     }, 'No se pudo guardar la prenda. Intenta de nuevo.');
   }
+
+  void _setPrimaryColor(int color) => setState(() {
+    _colorChosen = true;
+    _color = color;
+  });
+
+  void _setSecondaryColor(int? color) => setState(() {
+    _secondaryChosen = true;
+    _secondaryColor = color;
+  });
 
   Future<void> _delete() async {
     final confirmed = await showDialog<bool>(
@@ -143,6 +173,7 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
   Widget build(BuildContext context) {
     final subtypes = subtypeLabels[_category];
     final editing = widget.item != null;
+    final photoPath = widget.item?.photoPath ?? widget.photo!.path;
     return PopScope(
       canPop: !_busy,
       child: Scaffold(
@@ -150,7 +181,7 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
           title: Text(editing ? 'Editar prenda' : 'Agregar prenda'),
           actions: [
             TextButton(
-              onPressed: _busy || _category == null
+              onPressed: _busy || _samplingPrimary || _category == null
                   ? null
                   : () => unawaited(_save()),
               child: const Text('Guardar'),
@@ -160,9 +191,12 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            SizedBox(
-              height: 180,
-              child: GarmentPhoto(widget.item?.photoPath ?? widget.photo!.path),
+            GarmentColorPicker(
+              path: photoPath,
+              enabled: !_busy,
+              onPrimary: _setPrimaryColor,
+              onSamplingChanged: (value) =>
+                  setState(() => _samplingPrimary = value),
             ),
             if (_busy) const LinearProgressIndicator(),
             const SizedBox(height: 16),
@@ -198,39 +232,26 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
                   ? null
                   : (value) => setState(() => _formality = value!),
             ),
-            GarmentColorField(
-              color: _color,
-              onChanged: _busy
+            GarmentAppearance(
+              primary: _color,
+              secondary: _secondaryColor,
+              photoPath: photoPath,
+              pattern: _pattern,
+              onPrimary: _busy ? null : _setPrimaryColor,
+              onSecondary: _busy ? null : _setSecondaryColor,
+              onPattern: _busy
                   ? null
-                  : (value) => setState(() {
-                      _colorChosen = true;
-                      _color = value;
-                    }),
+                  : (value) => setState(() => _pattern = value),
             ),
-            ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              title: const Text('Más detalles'),
-              expandedCrossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GarmentChoices<Fit>(
-                  title: 'Ajuste',
-                  labels: fitLabels,
-                  value: _fit,
-                  optional: true,
-                  onChanged: _busy
-                      ? null
-                      : (value) => setState(() => _fit = value),
-                ),
-                GarmentChoices<Warmth>(
-                  title: 'Abrigo',
-                  labels: warmthLabels,
-                  value: _warmth,
-                  optional: true,
-                  onChanged: _busy
-                      ? null
-                      : (value) => setState(() => _warmth = value),
-                ),
-              ],
+            GarmentDetails(
+              fit: _fit,
+              warmth: _warmth,
+              onFitChanged: _busy
+                  ? null
+                  : (value) => setState(() => _fit = value),
+              onWarmthChanged: _busy
+                  ? null
+                  : (value) => setState(() => _warmth = value),
             ),
             if (editing)
               TextButton(

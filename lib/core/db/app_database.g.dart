@@ -70,6 +70,36 @@ class $GarmentsTable extends Garments
         type: DriftSqlType.string,
         requiredDuringInsert: true,
       ).withConverter<ColorFamily>($GarmentsTable.$convertercolorFamily);
+  static const VerificationMeta _secondaryColorMeta = const VerificationMeta(
+    'secondaryColor',
+  );
+  @override
+  late final GeneratedColumn<int> secondaryColor = GeneratedColumn<int>(
+    'secondary_color',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<ColorFamily?, String>
+  secondaryColorFamily = GeneratedColumn<String>(
+    'secondary_color_family',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<ColorFamily?>($GarmentsTable.$convertersecondaryColorFamilyn);
+  @override
+  late final GeneratedColumnWithTypeConverter<GarmentPattern, String> pattern =
+      GeneratedColumn<String>(
+        'pattern',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('solid'),
+      ).withConverter<GarmentPattern>($GarmentsTable.$converterpattern);
   @override
   late final GeneratedColumnWithTypeConverter<Fit?, String> fit =
       GeneratedColumn<String>(
@@ -167,6 +197,9 @@ class $GarmentsTable extends Garments
     formality,
     primaryColor,
     colorFamily,
+    secondaryColor,
+    secondaryColorFamily,
+    pattern,
     fit,
     warmth,
     lastWornAt,
@@ -219,6 +252,15 @@ class $GarmentsTable extends Garments
       );
     } else if (isInserting) {
       context.missing(_primaryColorMeta);
+    }
+    if (data.containsKey('secondary_color')) {
+      context.handle(
+        _secondaryColorMeta,
+        secondaryColor.isAcceptableOrUnknown(
+          data['secondary_color']!,
+          _secondaryColorMeta,
+        ),
+      );
     }
     if (data.containsKey('last_worn_at')) {
       context.handle(
@@ -302,6 +344,23 @@ class $GarmentsTable extends Garments
           data['${effectivePrefix}color_family'],
         )!,
       ),
+      secondaryColor: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}secondary_color'],
+      ),
+      secondaryColorFamily: $GarmentsTable.$convertersecondaryColorFamilyn
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.string,
+              data['${effectivePrefix}secondary_color_family'],
+            ),
+          ),
+      pattern: $GarmentsTable.$converterpattern.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}pattern'],
+        )!,
+      ),
       fit: $GarmentsTable.$converterfitn.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.string,
@@ -352,6 +411,16 @@ class $GarmentsTable extends Garments
   );
   static JsonTypeConverter2<ColorFamily, String, String> $convertercolorFamily =
       const EnumNameConverter<ColorFamily>(ColorFamily.values);
+  static JsonTypeConverter2<ColorFamily, String, String>
+  $convertersecondaryColorFamily = const EnumNameConverter<ColorFamily>(
+    ColorFamily.values,
+  );
+  static JsonTypeConverter2<ColorFamily?, String?, String?>
+  $convertersecondaryColorFamilyn = JsonTypeConverter2.asNullable(
+    $convertersecondaryColorFamily,
+  );
+  static JsonTypeConverter2<GarmentPattern, String, String> $converterpattern =
+      const EnumNameConverter<GarmentPattern>(GarmentPattern.values);
   static JsonTypeConverter2<Fit, String, String> $converterfit =
       const EnumNameConverter<Fit>(Fit.values);
   static JsonTypeConverter2<Fit?, String?, String?> $converterfitn =
@@ -369,6 +438,9 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
   final int formality;
   final int primaryColor;
   final ColorFamily colorFamily;
+  final int? secondaryColor;
+  final ColorFamily? secondaryColorFamily;
+  final GarmentPattern pattern;
   final Fit? fit;
   final Warmth? warmth;
   final DateTime? lastWornAt;
@@ -384,6 +456,9 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
     required this.formality,
     required this.primaryColor,
     required this.colorFamily,
+    this.secondaryColor,
+    this.secondaryColorFamily,
+    required this.pattern,
     this.fit,
     this.warmth,
     this.lastWornAt,
@@ -408,6 +483,21 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
     {
       map['color_family'] = Variable<String>(
         $GarmentsTable.$convertercolorFamily.toSql(colorFamily),
+      );
+    }
+    if (!nullToAbsent || secondaryColor != null) {
+      map['secondary_color'] = Variable<int>(secondaryColor);
+    }
+    if (!nullToAbsent || secondaryColorFamily != null) {
+      map['secondary_color_family'] = Variable<String>(
+        $GarmentsTable.$convertersecondaryColorFamilyn.toSql(
+          secondaryColorFamily,
+        ),
+      );
+    }
+    {
+      map['pattern'] = Variable<String>(
+        $GarmentsTable.$converterpattern.toSql(pattern),
       );
     }
     if (!nullToAbsent || fit != null) {
@@ -437,6 +527,13 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
       formality: Value(formality),
       primaryColor: Value(primaryColor),
       colorFamily: Value(colorFamily),
+      secondaryColor: secondaryColor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(secondaryColor),
+      secondaryColorFamily: secondaryColorFamily == null && nullToAbsent
+          ? const Value.absent()
+          : Value(secondaryColorFamily),
+      pattern: Value(pattern),
       fit: fit == null && nullToAbsent ? const Value.absent() : Value(fit),
       warmth: warmth == null && nullToAbsent
           ? const Value.absent()
@@ -468,6 +565,12 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
       colorFamily: $GarmentsTable.$convertercolorFamily.fromJson(
         serializer.fromJson<String>(json['colorFamily']),
       ),
+      secondaryColor: serializer.fromJson<int?>(json['secondaryColor']),
+      secondaryColorFamily: $GarmentsTable.$convertersecondaryColorFamilyn
+          .fromJson(serializer.fromJson<String?>(json['secondaryColorFamily'])),
+      pattern: $GarmentsTable.$converterpattern.fromJson(
+        serializer.fromJson<String>(json['pattern']),
+      ),
       fit: $GarmentsTable.$converterfitn.fromJson(
         serializer.fromJson<String?>(json['fit']),
       ),
@@ -496,6 +599,15 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
       'colorFamily': serializer.toJson<String>(
         $GarmentsTable.$convertercolorFamily.toJson(colorFamily),
       ),
+      'secondaryColor': serializer.toJson<int?>(secondaryColor),
+      'secondaryColorFamily': serializer.toJson<String?>(
+        $GarmentsTable.$convertersecondaryColorFamilyn.toJson(
+          secondaryColorFamily,
+        ),
+      ),
+      'pattern': serializer.toJson<String>(
+        $GarmentsTable.$converterpattern.toJson(pattern),
+      ),
       'fit': serializer.toJson<String?>(
         $GarmentsTable.$converterfitn.toJson(fit),
       ),
@@ -518,6 +630,9 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
     int? formality,
     int? primaryColor,
     ColorFamily? colorFamily,
+    Value<int?> secondaryColor = const Value.absent(),
+    Value<ColorFamily?> secondaryColorFamily = const Value.absent(),
+    GarmentPattern? pattern,
     Value<Fit?> fit = const Value.absent(),
     Value<Warmth?> warmth = const Value.absent(),
     Value<DateTime?> lastWornAt = const Value.absent(),
@@ -533,6 +648,13 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
     formality: formality ?? this.formality,
     primaryColor: primaryColor ?? this.primaryColor,
     colorFamily: colorFamily ?? this.colorFamily,
+    secondaryColor: secondaryColor.present
+        ? secondaryColor.value
+        : this.secondaryColor,
+    secondaryColorFamily: secondaryColorFamily.present
+        ? secondaryColorFamily.value
+        : this.secondaryColorFamily,
+    pattern: pattern ?? this.pattern,
     fit: fit.present ? fit.value : this.fit,
     warmth: warmth.present ? warmth.value : this.warmth,
     lastWornAt: lastWornAt.present ? lastWornAt.value : this.lastWornAt,
@@ -554,6 +676,13 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
       colorFamily: data.colorFamily.present
           ? data.colorFamily.value
           : this.colorFamily,
+      secondaryColor: data.secondaryColor.present
+          ? data.secondaryColor.value
+          : this.secondaryColor,
+      secondaryColorFamily: data.secondaryColorFamily.present
+          ? data.secondaryColorFamily.value
+          : this.secondaryColorFamily,
+      pattern: data.pattern.present ? data.pattern.value : this.pattern,
       fit: data.fit.present ? data.fit.value : this.fit,
       warmth: data.warmth.present ? data.warmth.value : this.warmth,
       lastWornAt: data.lastWornAt.present
@@ -576,6 +705,9 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
           ..write('formality: $formality, ')
           ..write('primaryColor: $primaryColor, ')
           ..write('colorFamily: $colorFamily, ')
+          ..write('secondaryColor: $secondaryColor, ')
+          ..write('secondaryColorFamily: $secondaryColorFamily, ')
+          ..write('pattern: $pattern, ')
           ..write('fit: $fit, ')
           ..write('warmth: $warmth, ')
           ..write('lastWornAt: $lastWornAt, ')
@@ -596,6 +728,9 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
     formality,
     primaryColor,
     colorFamily,
+    secondaryColor,
+    secondaryColorFamily,
+    pattern,
     fit,
     warmth,
     lastWornAt,
@@ -615,6 +750,9 @@ class GarmentRow extends DataClass implements Insertable<GarmentRow> {
           other.formality == this.formality &&
           other.primaryColor == this.primaryColor &&
           other.colorFamily == this.colorFamily &&
+          other.secondaryColor == this.secondaryColor &&
+          other.secondaryColorFamily == this.secondaryColorFamily &&
+          other.pattern == this.pattern &&
           other.fit == this.fit &&
           other.warmth == this.warmth &&
           other.lastWornAt == this.lastWornAt &&
@@ -632,6 +770,9 @@ class GarmentsCompanion extends UpdateCompanion<GarmentRow> {
   final Value<int> formality;
   final Value<int> primaryColor;
   final Value<ColorFamily> colorFamily;
+  final Value<int?> secondaryColor;
+  final Value<ColorFamily?> secondaryColorFamily;
+  final Value<GarmentPattern> pattern;
   final Value<Fit?> fit;
   final Value<Warmth?> warmth;
   final Value<DateTime?> lastWornAt;
@@ -648,6 +789,9 @@ class GarmentsCompanion extends UpdateCompanion<GarmentRow> {
     this.formality = const Value.absent(),
     this.primaryColor = const Value.absent(),
     this.colorFamily = const Value.absent(),
+    this.secondaryColor = const Value.absent(),
+    this.secondaryColorFamily = const Value.absent(),
+    this.pattern = const Value.absent(),
     this.fit = const Value.absent(),
     this.warmth = const Value.absent(),
     this.lastWornAt = const Value.absent(),
@@ -665,6 +809,9 @@ class GarmentsCompanion extends UpdateCompanion<GarmentRow> {
     required int formality,
     required int primaryColor,
     required ColorFamily colorFamily,
+    this.secondaryColor = const Value.absent(),
+    this.secondaryColorFamily = const Value.absent(),
+    this.pattern = const Value.absent(),
     this.fit = const Value.absent(),
     this.warmth = const Value.absent(),
     this.lastWornAt = const Value.absent(),
@@ -690,6 +837,9 @@ class GarmentsCompanion extends UpdateCompanion<GarmentRow> {
     Expression<int>? formality,
     Expression<int>? primaryColor,
     Expression<String>? colorFamily,
+    Expression<int>? secondaryColor,
+    Expression<String>? secondaryColorFamily,
+    Expression<String>? pattern,
     Expression<String>? fit,
     Expression<String>? warmth,
     Expression<DateTime>? lastWornAt,
@@ -707,6 +857,10 @@ class GarmentsCompanion extends UpdateCompanion<GarmentRow> {
       if (formality != null) 'formality': formality,
       if (primaryColor != null) 'primary_color': primaryColor,
       if (colorFamily != null) 'color_family': colorFamily,
+      if (secondaryColor != null) 'secondary_color': secondaryColor,
+      if (secondaryColorFamily != null)
+        'secondary_color_family': secondaryColorFamily,
+      if (pattern != null) 'pattern': pattern,
       if (fit != null) 'fit': fit,
       if (warmth != null) 'warmth': warmth,
       if (lastWornAt != null) 'last_worn_at': lastWornAt,
@@ -726,6 +880,9 @@ class GarmentsCompanion extends UpdateCompanion<GarmentRow> {
     Value<int>? formality,
     Value<int>? primaryColor,
     Value<ColorFamily>? colorFamily,
+    Value<int?>? secondaryColor,
+    Value<ColorFamily?>? secondaryColorFamily,
+    Value<GarmentPattern>? pattern,
     Value<Fit?>? fit,
     Value<Warmth?>? warmth,
     Value<DateTime?>? lastWornAt,
@@ -743,6 +900,9 @@ class GarmentsCompanion extends UpdateCompanion<GarmentRow> {
       formality: formality ?? this.formality,
       primaryColor: primaryColor ?? this.primaryColor,
       colorFamily: colorFamily ?? this.colorFamily,
+      secondaryColor: secondaryColor ?? this.secondaryColor,
+      secondaryColorFamily: secondaryColorFamily ?? this.secondaryColorFamily,
+      pattern: pattern ?? this.pattern,
       fit: fit ?? this.fit,
       warmth: warmth ?? this.warmth,
       lastWornAt: lastWornAt ?? this.lastWornAt,
@@ -778,6 +938,21 @@ class GarmentsCompanion extends UpdateCompanion<GarmentRow> {
     if (colorFamily.present) {
       map['color_family'] = Variable<String>(
         $GarmentsTable.$convertercolorFamily.toSql(colorFamily.value),
+      );
+    }
+    if (secondaryColor.present) {
+      map['secondary_color'] = Variable<int>(secondaryColor.value);
+    }
+    if (secondaryColorFamily.present) {
+      map['secondary_color_family'] = Variable<String>(
+        $GarmentsTable.$convertersecondaryColorFamilyn.toSql(
+          secondaryColorFamily.value,
+        ),
+      );
+    }
+    if (pattern.present) {
+      map['pattern'] = Variable<String>(
+        $GarmentsTable.$converterpattern.toSql(pattern.value),
       );
     }
     if (fit.present) {
@@ -823,6 +998,9 @@ class GarmentsCompanion extends UpdateCompanion<GarmentRow> {
           ..write('formality: $formality, ')
           ..write('primaryColor: $primaryColor, ')
           ..write('colorFamily: $colorFamily, ')
+          ..write('secondaryColor: $secondaryColor, ')
+          ..write('secondaryColorFamily: $secondaryColorFamily, ')
+          ..write('pattern: $pattern, ')
           ..write('fit: $fit, ')
           ..write('warmth: $warmth, ')
           ..write('lastWornAt: $lastWornAt, ')
@@ -1330,6 +1508,9 @@ typedef $$GarmentsTableCreateCompanionBuilder = GarmentsCompanion Function({
   required int formality,
   required int primaryColor,
   required ColorFamily colorFamily,
+  Value<int?> secondaryColor,
+  Value<ColorFamily?> secondaryColorFamily,
+  Value<GarmentPattern> pattern,
   Value<Fit?> fit,
   Value<Warmth?> warmth,
   Value<DateTime?> lastWornAt,
@@ -1347,6 +1528,9 @@ typedef $$GarmentsTableUpdateCompanionBuilder = GarmentsCompanion Function({
   Value<int> formality,
   Value<int> primaryColor,
   Value<ColorFamily> colorFamily,
+  Value<int?> secondaryColor,
+  Value<ColorFamily?> secondaryColorFamily,
+  Value<GarmentPattern> pattern,
   Value<Fit?> fit,
   Value<Warmth?> warmth,
   Value<DateTime?> lastWornAt,
@@ -1396,6 +1580,23 @@ class $$GarmentsTableFilterComposer
   ColumnWithTypeConverterFilters<ColorFamily, ColorFamily, String>
   get colorFamily => $composableBuilder(
     column: $table.colorFamily,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<int> get secondaryColor => $composableBuilder(
+    column: $table.secondaryColor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<ColorFamily?, ColorFamily, String>
+  get secondaryColorFamily => $composableBuilder(
+    column: $table.secondaryColorFamily,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<GarmentPattern, GarmentPattern, String>
+  get pattern => $composableBuilder(
+    column: $table.pattern,
     builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
@@ -1481,6 +1682,21 @@ class $$GarmentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get secondaryColor => $composableBuilder(
+    column: $table.secondaryColor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get secondaryColorFamily => $composableBuilder(
+    column: $table.secondaryColorFamily,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pattern => $composableBuilder(
+    column: $table.pattern,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get fit => $composableBuilder(
     column: $table.fit,
     builder: (column) => ColumnOrderings(column),
@@ -1554,6 +1770,20 @@ class $$GarmentsTableAnnotationComposer
         builder: (column) => column,
       );
 
+  GeneratedColumn<int> get secondaryColor => $composableBuilder(
+    column: $table.secondaryColor,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<ColorFamily?, String>
+  get secondaryColorFamily => $composableBuilder(
+    column: $table.secondaryColorFamily,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<GarmentPattern, String> get pattern =>
+      $composableBuilder(column: $table.pattern, builder: (column) => column);
+
   GeneratedColumnWithTypeConverter<Fit?, String> get fit =>
       $composableBuilder(column: $table.fit, builder: (column) => column);
 
@@ -1618,6 +1848,9 @@ class $$GarmentsTableTableManager
                 Value<int> formality = const Value.absent(),
                 Value<int> primaryColor = const Value.absent(),
                 Value<ColorFamily> colorFamily = const Value.absent(),
+                Value<int?> secondaryColor = const Value.absent(),
+                Value<ColorFamily?> secondaryColorFamily = const Value.absent(),
+                Value<GarmentPattern> pattern = const Value.absent(),
                 Value<Fit?> fit = const Value.absent(),
                 Value<Warmth?> warmth = const Value.absent(),
                 Value<DateTime?> lastWornAt = const Value.absent(),
@@ -1634,6 +1867,9 @@ class $$GarmentsTableTableManager
                 formality: formality,
                 primaryColor: primaryColor,
                 colorFamily: colorFamily,
+                secondaryColor: secondaryColor,
+                secondaryColorFamily: secondaryColorFamily,
+                pattern: pattern,
                 fit: fit,
                 warmth: warmth,
                 lastWornAt: lastWornAt,
@@ -1652,6 +1888,9 @@ class $$GarmentsTableTableManager
                 required int formality,
                 required int primaryColor,
                 required ColorFamily colorFamily,
+                Value<int?> secondaryColor = const Value.absent(),
+                Value<ColorFamily?> secondaryColorFamily = const Value.absent(),
+                Value<GarmentPattern> pattern = const Value.absent(),
                 Value<Fit?> fit = const Value.absent(),
                 Value<Warmth?> warmth = const Value.absent(),
                 Value<DateTime?> lastWornAt = const Value.absent(),
@@ -1668,6 +1907,9 @@ class $$GarmentsTableTableManager
                 formality: formality,
                 primaryColor: primaryColor,
                 colorFamily: colorFamily,
+                secondaryColor: secondaryColor,
+                secondaryColorFamily: secondaryColorFamily,
+                pattern: pattern,
                 fit: fit,
                 warmth: warmth,
                 lastWornAt: lastWornAt,

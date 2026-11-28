@@ -20,6 +20,9 @@ class GarmentDraft {
     required this.primaryColor,
     required this.colorFamily,
     required this.photoPath,
+    this.secondaryColor,
+    this.secondaryColorFamily,
+    this.pattern = GarmentPattern.solid,
     this.fit,
     this.warmth,
   });
@@ -30,6 +33,9 @@ class GarmentDraft {
   final int primaryColor;
   final ColorFamily colorFamily;
   final String photoPath;
+  final int? secondaryColor;
+  final ColorFamily? secondaryColorFamily;
+  final GarmentPattern pattern;
   final Fit? fit;
   final Warmth? warmth;
 }
@@ -82,6 +88,9 @@ class GarmentRepository {
             formality: draft.formality,
             primaryColor: draft.primaryColor,
             colorFamily: draft.colorFamily,
+            secondaryColor: Value(draft.secondaryColor),
+            secondaryColorFamily: Value(draft.secondaryColorFamily),
+            pattern: Value(draft.pattern),
             fit: Value(draft.fit),
             warmth: Value(draft.warmth),
             photoPath: draft.photoPath,
@@ -102,6 +111,9 @@ class GarmentRepository {
         formality: Value(garment.formality),
         primaryColor: Value(garment.primaryColor),
         colorFamily: Value(garment.colorFamily),
+        secondaryColor: Value(garment.secondaryColor),
+        secondaryColorFamily: Value(garment.secondaryColorFamily),
+        pattern: Value(garment.pattern),
         fit: Value(garment.fit),
         warmth: Value(garment.warmth),
         lastWornAt: Value(garment.lastWornAt?.toUtc()),
@@ -158,6 +170,9 @@ class GarmentRepository {
       formality: row.formality,
       primaryColor: row.primaryColor,
       colorFamily: row.colorFamily,
+      secondaryColor: row.secondaryColor,
+      secondaryColorFamily: row.secondaryColorFamily,
+      pattern: row.pattern,
       fit: row.fit,
       warmth: row.warmth,
       lastWornAt: row.lastWornAt,
