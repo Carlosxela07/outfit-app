@@ -57,9 +57,8 @@ DetectedColors detectColors(Uint8List bytes) {
   if (decoded == null) return const DetectedColors(defaultGarmentColor);
   final sample = _downsample(decoded);
   final buckets = <int, _ColorBucket>{};
-  final edgeWidth = (sample.width * 0.12).ceil();
-  final edgeHeight = (sample.height * 0.12).ceil();
-  var edgeCount = 0;
+  final edgeWidth = (sample.width * 0.20).ceil();
+  final edgeHeight = (sample.height * 0.20).ceil();
   for (final pixel in sample) {
     if (pixel.aNormalized < 0.5) continue;
     final r = (pixel.rNormalized * 255).round();
@@ -79,20 +78,12 @@ DetectedColors detectColors(Uint8List bytes) {
         pixel.y < edgeHeight ||
         pixel.y >= sample.height - edgeHeight) {
       bucket.edgeCount++;
-      edgeCount++;
     }
   }
 
-  final background = buckets.values
-      .where((bucket) => bucket.edgeCount >= edgeCount * 0.15)
-      .map((bucket) => bucket.color)
+  final foreground = _clusterBuckets(buckets.values)
+      .where((cluster) => cluster.edgeCount < cluster.count * 0.45)
       .toList();
-  // A radius of 32 RGB units includes nearby shades in adjacent buckets.
-  final foreground = buckets.values.where((bucket) {
-    return !background.any(
-      (color) => _distanceSquared(color, bucket.color) <= 32 * 32,
-    );
-  }).toList();
   final count = foreground.fold(0, (total, bucket) => total + bucket.count);
   if (count < sample.width * sample.height * 0.05) {
     if (buckets.length == 1) {
@@ -104,13 +95,37 @@ DetectedColors detectColors(Uint8List bytes) {
   foreground.sort((a, b) => b.weight.compareTo(a.weight));
   final primary = foreground.first;
   for (final candidate in foreground.skip(1)) {
-    if (candidate.weight < primary.weight * 0.2) break;
+    if (candidate.weight < primary.weight * 0.35) break;
     // A separation of 72 RGB units keeps nearby shades out of the palette.
     if (_distanceSquared(primary.color, candidate.color) >= 72 * 72) {
       return DetectedColors(primary.color, candidate.color);
     }
   }
   return DetectedColors(primary.color);
+}
+
+List<_ColorBucket> _clusterBuckets(Iterable<_ColorBucket> buckets) {
+  final ordered = buckets.toList()
+    ..sort((a, b) {
+      final byCount = b.count.compareTo(a.count);
+      return byCount == 0 ? a.color.compareTo(b.color) : byCount;
+    });
+  final clusters = <int, _ColorBucket>{};
+  for (final bucket in ordered) {
+    final color = bucket.color;
+    var seed = color;
+    // Use fixed seeds so chains of similar shades cannot merge distant colors.
+    var closest = 40 * 40 + 1;
+    for (final candidate in clusters.keys) {
+      final distance = _distanceSquared(color, candidate);
+      if (distance < closest) {
+        closest = distance;
+        seed = candidate;
+      }
+    }
+    clusters.putIfAbsent(seed, _ColorBucket.new).merge(bucket);
+  }
+  return clusters.values.toList();
 }
 
 int _distanceSquared(int a, int b) {
@@ -127,6 +142,15 @@ class _ColorBucket {
   int green = 0;
   int blue = 0;
   double weight = 0;
+
+  void merge(_ColorBucket other) {
+    count += other.count;
+    edgeCount += other.edgeCount;
+    red += other.red;
+    green += other.green;
+    blue += other.blue;
+    weight += other.weight;
+  }
 
   int get color =>
       0xff000000 |

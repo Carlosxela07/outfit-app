@@ -38,6 +38,59 @@ void main() {
     expect(detectColors(image.encodePng(photo)).primary, 0xffd3b38b);
   });
 
+  test('finds a beige garment touching the edge on noisy navy bedding', () {
+    final random = Random(61);
+    final photo = image.Image(width: 64, height: 64);
+    for (final pixel in photo) {
+      if ((pixel.y + pixel.x ~/ 12) % 9 < 2) {
+        pixel.setRgb(
+          137 + random.nextInt(27),
+          194 + random.nextInt(27),
+          224 + random.nextInt(32),
+        );
+      } else {
+        pixel.setRgb(
+          10 + random.nextInt(23),
+          14 + random.nextInt(28),
+          54 + random.nextInt(37),
+        );
+      }
+    }
+    fill(photo, 14, 0, 49, 47, 0xd3b38b);
+    final colors = detectColors(image.encodePng(photo));
+    expect(colors.primary, 0xffd3b38b);
+    expect(colors.secondary, isNull);
+  });
+
+  test(
+    'finds a navy garment on an irregular black and white marbled floor',
+    () {
+      final random = Random(62);
+      final photo = image.Image(width: 64, height: 64);
+      for (final pixel in photo) {
+        final vein =
+            sin(pixel.x / 4 + 2 * sin(pixel.y / 8)) +
+            cos(pixel.y / 5 - sin(pixel.x / 9));
+        final shade = (vein > 0 ? 223 : 3) + random.nextInt(32);
+        pixel.setRgb(shade, shade, shade);
+      }
+      fill(photo, 18, 16, 45, 47, 0x16234d);
+      final colors = detectColors(image.encodePng(photo));
+      expect(colors.primary, 0xff16234d);
+      expect(colors.secondary, isNull);
+    },
+  );
+
+  test('omits a secondary below 35 percent of the primary weight', () {
+    final photo = image.Image(width: 64, height: 64)
+      ..clear(image.ColorRgb8(0, 0, 180));
+    fill(photo, 15, 16, 48, 47, 0x000000);
+    fill(photo, 15, 28, 48, 34, 0xffffff);
+    final colors = detectColors(image.encodePng(photo));
+    expect(colors.primary, 0xff000000);
+    expect(colors.secondary, isNull);
+  });
+
   test('finds a large yellow garment on blue', () {
     final photo = image.Image(width: 64, height: 64)
       ..clear(image.ColorRgb8(0, 0, 180));

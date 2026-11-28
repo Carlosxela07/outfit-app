@@ -33,9 +33,9 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
   Fit? _fit;
   Warmth? _warmth;
   bool _busy = false;
+  bool _samplingPrimary = false;
   bool _colorChosen = false;
   bool _secondaryChosen = false;
-  bool _patternChosen = false;
   Future<void>? _colorDetection;
 
   @override
@@ -64,12 +64,7 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
       if (!mounted) return;
       setState(() {
         if (!_colorChosen) _color = colors.primary;
-        if (!_secondaryChosen) {
-          _secondaryColor = colors.secondary;
-          if (!_patternChosen && colors.secondary != null) {
-            _pattern = GarmentPattern.graphic;
-          }
-        }
+        if (!_secondaryChosen) _secondaryColor = colors.secondary;
       });
     } on Exception {
       // Use the default color if the photo cannot be sampled.
@@ -78,7 +73,7 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
 
   Future<void> _save() async {
     final category = _category;
-    if (category == null || _busy) return;
+    if (category == null || _busy || _samplingPrimary) return;
 
     await _submit((actions) async {
       await _colorDetection;
@@ -178,6 +173,7 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
   Widget build(BuildContext context) {
     final subtypes = subtypeLabels[_category];
     final editing = widget.item != null;
+    final photoPath = widget.item?.photoPath ?? widget.photo!.path;
     return PopScope(
       canPop: !_busy,
       child: Scaffold(
@@ -185,7 +181,7 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
           title: Text(editing ? 'Editar prenda' : 'Agregar prenda'),
           actions: [
             TextButton(
-              onPressed: _busy || _category == null
+              onPressed: _busy || _samplingPrimary || _category == null
                   ? null
                   : () => unawaited(_save()),
               child: const Text('Guardar'),
@@ -196,10 +192,11 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
           padding: const EdgeInsets.all(16),
           children: [
             GarmentColorPicker(
-              path: widget.item?.photoPath ?? widget.photo!.path,
+              path: photoPath,
               enabled: !_busy,
               onPrimary: _setPrimaryColor,
-              onSecondary: _setSecondaryColor,
+              onSamplingChanged: (value) =>
+                  setState(() => _samplingPrimary = value),
             ),
             if (_busy) const LinearProgressIndicator(),
             const SizedBox(height: 16),
@@ -238,15 +235,13 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
             GarmentAppearance(
               primary: _color,
               secondary: _secondaryColor,
+              photoPath: photoPath,
               pattern: _pattern,
               onPrimary: _busy ? null : _setPrimaryColor,
               onSecondary: _busy ? null : _setSecondaryColor,
               onPattern: _busy
                   ? null
-                  : (value) => setState(() {
-                      _patternChosen = true;
-                      _pattern = value;
-                    }),
+                  : (value) => setState(() => _pattern = value),
             ),
             GarmentDetails(
               fit: _fit,

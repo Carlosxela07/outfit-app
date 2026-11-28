@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:outfit_engine/outfit_engine.dart';
 
+import 'garment_color_picker.dart';
 import 'garment_options.dart';
 
 class GarmentChoices<T> extends StatelessWidget {
@@ -50,6 +51,7 @@ class GarmentColorField extends StatelessWidget {
     required this.color,
     this.title = 'Color',
     this.onRemove,
+    this.eyedropper,
     required this.onChanged,
     super.key,
   });
@@ -57,6 +59,7 @@ class GarmentColorField extends StatelessWidget {
   final int? color;
   final String title;
   final VoidCallback? onRemove;
+  final Widget? eyedropper;
   final ValueChanged<int>? onChanged;
 
   @override
@@ -71,12 +74,19 @@ class GarmentColorField extends StatelessWidget {
           ? 'Sin color secundario'
           : colorFamilyLabels[classifyColor(color!)]!,
     ),
-    trailing: color == null || onRemove == null
+    trailing: eyedropper == null && (color == null || onRemove == null)
         ? null
-        : IconButton(
-            tooltip: 'Quitar color secundario',
-            onPressed: onRemove,
-            icon: const Icon(Icons.close),
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ?eyedropper,
+              if (color != null && onRemove != null)
+                IconButton(
+                  tooltip: 'Quitar color secundario',
+                  onPressed: onRemove,
+                  icon: const Icon(Icons.close),
+                ),
+            ],
           ),
     enabled: onChanged != null,
     onTap: onChanged == null
@@ -132,7 +142,7 @@ class GarmentDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ExpansionTile(
     tilePadding: EdgeInsets.zero,
-    title: const Text('M?s detalles'),
+    title: const Text('Más detalles'),
     expandedCrossAxisAlignment: CrossAxisAlignment.start,
     children: [
       GarmentChoices<Fit>(
@@ -157,6 +167,7 @@ class GarmentAppearance extends StatelessWidget {
   const GarmentAppearance({
     required this.primary,
     required this.secondary,
+    required this.photoPath,
     required this.pattern,
     required this.onPrimary,
     required this.onSecondary,
@@ -166,6 +177,7 @@ class GarmentAppearance extends StatelessWidget {
 
   final int primary;
   final int? secondary;
+  final String photoPath;
   final GarmentPattern pattern;
   final ValueChanged<int>? onPrimary;
   final ValueChanged<int?>? onSecondary;
@@ -178,6 +190,10 @@ class GarmentAppearance extends StatelessWidget {
       GarmentColorField(color: primary, onChanged: onPrimary),
       GarmentColorField(
         title: 'Color secundario',
+        eyedropper: SecondaryColorPicker(
+          path: photoPath,
+          onChanged: onSecondary,
+        ),
         color: secondary,
         onChanged: onSecondary,
         onRemove: onSecondary == null ? null : () => onSecondary?.call(null),

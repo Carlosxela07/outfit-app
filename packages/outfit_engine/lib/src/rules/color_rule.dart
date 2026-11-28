@@ -26,8 +26,7 @@ final class ColorRule implements OutfitRule {
       final isNeutral =
           primary == ColorFamily.neutral &&
           (secondary == null || secondary == ColorFamily.neutral);
-      if (garment.pattern != GarmentPattern.solid ||
-          garment.secondaryColor != null) {
+      if (garment.pattern != GarmentPattern.solid) {
         protagonists++;
       } else {
         supportingGarmentsAreNeutral &= isNeutral;

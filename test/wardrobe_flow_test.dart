@@ -10,6 +10,7 @@ import 'package:outfit_app/core/storage/dominant_color.dart';
 import 'package:outfit_app/core/storage/garment_photos.dart';
 import 'package:outfit_app/features/wardrobe/application/wardrobe_providers.dart';
 import 'package:outfit_app/features/wardrobe/data/garment_repository.dart';
+import 'package:outfit_app/features/wardrobe/presentation/garment_photo.dart';
 import 'package:outfit_app/features/wardrobe/presentation/wardrobe_screen.dart';
 import 'package:outfit_engine/outfit_engine.dart';
 import 'package:path/path.dart' as path;
@@ -83,6 +84,35 @@ void main() {
     await tester.tap(tile);
     await tester.pumpAndSettle();
     expect(find.text('Editar prenda'), findsOneWidget);
+    expect(find.text('Toca la prenda para ajustar el color'), findsOneWidget);
+    expect(find.text('Más detalles'), findsOneWidget);
+    await tester.tap(find.byType(GarmentPhoto));
+    await tester.pumpAndSettle();
+    expect(find.text('Color actualizado'), findsOneWidget);
+    expect(find.byKey(const ValueKey('sampled-color')), findsOneWidget);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(repository.item?.garment.primaryColor, 0xffcfb084);
+
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Tomar color secundario de la foto'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(GarmentPhoto),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Listo'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Liso'))
+          .selected,
+      isTrue,
+    );
     await tester.tap(find.text('Color'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Azul marino'));
@@ -90,6 +120,8 @@ void main() {
     await tester.tap(save);
     await tester.pumpAndSettle();
     expect(repository.item?.garment.primaryColor, 0xff20385e);
+    expect(repository.item?.garment.secondaryColor, 0xffcfb084);
+    expect(repository.item?.garment.pattern, GarmentPattern.solid);
 
     await tester.tap(tile);
     await tester.pumpAndSettle();
@@ -114,6 +146,14 @@ class _TestGarmentPhotos extends GarmentPhotos {
   @override
   Future<DetectedColors> detectPhotoColors(String source) async =>
       detectColors(File(source).readAsBytesSync());
+
+  @override
+  Future<int?> sampleColor(
+    String source,
+    BoxFit fit,
+    Size viewport,
+    Offset position,
+  ) async => 0xffcfb084;
 
   @override
   Future<String> save(String id, String source) async =>
