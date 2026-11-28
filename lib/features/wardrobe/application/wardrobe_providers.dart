@@ -79,6 +79,24 @@ class WardrobeActions {
     }
   }
 
+  Future<void> save(GarmentDraft draft, {Garment? existing}) {
+    if (existing == null) return add(draft);
+    return update(
+      existing.copyWith(
+        category: draft.category,
+        subtype: draft.subtype,
+        formality: draft.formality,
+        primaryColor: draft.primaryColor,
+        colorFamily: draft.colorFamily,
+        secondaryColor: draft.secondaryColor,
+        secondaryColorFamily: draft.secondaryColorFamily,
+        pattern: draft.pattern,
+        fit: draft.fit,
+        warmth: draft.warmth,
+      ),
+    );
+  }
+
   Future<void> update(Garment garment) => _repository.update(garment);
 
   Future<void> delete(WardrobeItem item) => _repository.delete(

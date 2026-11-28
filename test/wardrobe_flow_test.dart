@@ -163,6 +163,30 @@ void main() {
         ),
       ));
       await _openPicker(tester, 'Galería');
+      expect(
+        find.widgetWithText(FilterChip, 'Calzado · Tenis'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(FilterChip, 'Casual'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, 'Color'), findsOneWidget);
+      expect(find.text('Categoría'), findsNothing);
+      expect(find.text('Formalidad'), findsNothing);
+      expect(find.text('Color secundario'), findsNothing);
+      expect(find.text('Estampado'), findsNothing);
+      expect(find.text('Más detalles'), findsNothing);
+
+      await _tapAndSettle(tester, find.widgetWithText(FilterChip, 'Color'));
+      expect(find.text('Color secundario'), findsOneWidget);
+      expect(find.text('Estampado'), findsNothing);
+      expect(find.text('Formalidad'), findsNothing);
+      await _tapAndSettle(tester, find.widgetWithText(FilterChip, 'Casual'));
+      expect(find.text('Formalidad'), findsOneWidget);
+      expect(find.text('Color secundario'), findsNothing);
+      await _tapAndSettle(tester, find.text('Editar todo'));
+      expect(find.text('Color secundario'), findsOneWidget);
+      expect(find.text('Estampado'), findsOneWidget);
+      expect(find.text('Más detalles'), findsOneWidget);
+      expect(find.text('Ajuste'), findsOneWidget);
       expect(tester.widget<ChoiceChip>(shoes).selected, isTrue);
       expect(
         tester
@@ -215,6 +239,60 @@ void main() {
     },
   );
 
+  _testCapture(
+    'filters categories and collapses groups after choosing another subtype',
+    (tester, database) async {
+      await _openPicker(tester, 'Galería');
+      expect(find.widgetWithText(ChoiceChip, 'Blazer'), findsOneWidget);
+      await _tapChip(tester, 'Calzado');
+      expect(find.widgetWithText(ChoiceChip, 'Tenis'), findsOneWidget);
+      expect(find.text('Calzado'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, 'Blazer'), findsNothing);
+      await _tapChip(tester, 'Tenis');
+      await _tapAndSettle(tester, find.text('Guardar'));
+
+      await _openPicker(tester, 'Galería');
+      await _tapAndSettle(
+        tester,
+        find.widgetWithText(FilterChip, 'Calzado · Tenis'),
+      );
+      expect(find.widgetWithText(ChoiceChip, 'Blazer'), findsNothing);
+      expect(find.text('Calzado'), findsOneWidget);
+      final otherType = find.widgetWithText(ActionChip, 'Otro tipo…');
+      await _tapAndSettle(tester, otherType);
+      expect(find.text('Calzado'), findsNWidgets(2));
+      expect(otherType, findsNothing);
+      await _tapChip(tester, 'Blazer');
+      expect(find.widgetWithText(FilterChip, 'Capas · Blazer'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, 'Arreglado'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, 'Tenis'), findsNothing);
+      expect(otherType, findsOneWidget);
+      await _tapAndSettle(tester, find.text('Guardar'));
+      final garments = await database.select(database.garments).get();
+      expect(
+        garments.singleWhere((row) => row.subtype == 'blazer').formality,
+        4,
+      );
+    },
+  );
+
+  _testCapture('preserves manual formality when choosing another subtype', (
+    tester,
+    database,
+  ) async {
+    await _openPicker(tester, 'Galería');
+    await _tapChip(tester, 'Tenis');
+    await _tapChip(tester, 'Muy casual');
+    await _tapAndSettle(tester, find.widgetWithText(ActionChip, 'Otro tipo…'));
+    await _tapChip(tester, 'Blazer');
+    final manualFormality = find.widgetWithText(ChoiceChip, 'Muy casual');
+    expect(tester.widget<ChoiceChip>(manualFormality).selected, isTrue);
+    await _tapAndSettle(tester, find.text('Guardar'));
+    final garment = await database.select(database.garments).getSingle();
+    expect(garment.subtype, 'blazer');
+    expect(garment.formality, 1);
+  });
+
   _testCapture('saves the first and third batch photos and skips the second', (
     tester,
     database,
@@ -225,12 +303,8 @@ void main() {
     await tester.tap(find.text('Guardar y siguiente'));
     await tester.pumpAndSettle();
     expect(find.text('Prenda 2 de 3'), findsOneWidget);
-    expect(
-      tester
-          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Tenis'))
-          .selected,
-      isTrue,
-    );
+    expect(find.widgetWithText(FilterChip, 'Calzado · Tenis'), findsOneWidget);
+    expect(find.text('Subtipo'), findsNothing);
     await tester.tap(find.text('Omitir'));
     await tester.pumpAndSettle();
     expect(find.text('Prenda 3 de 3'), findsOneWidget);
@@ -290,12 +364,7 @@ void main() {
     await tester.tap(find.text('Tomar otra'));
     await tester.pumpAndSettle();
     expect(find.text('Agregar prenda'), findsOneWidget);
-    expect(
-      tester
-          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Tenis'))
-          .selected,
-      isTrue,
-    );
+    expect(find.widgetWithText(FilterChip, 'Calzado · Tenis'), findsOneWidget);
   });
 }
 
@@ -389,10 +458,12 @@ Future<void> _openPicker(WidgetTester tester, String option) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _tapChip(WidgetTester tester, String label) async {
-  final chip = find.widgetWithText(ChoiceChip, label);
-  await tester.ensureVisible(chip);
-  await tester.tap(chip);
+Future<void> _tapChip(WidgetTester tester, String label) =>
+    _tapAndSettle(tester, find.widgetWithText(ChoiceChip, label));
+
+Future<void> _tapAndSettle(WidgetTester tester, Finder target) async {
+  await tester.ensureVisible(target);
+  await tester.tap(target);
   await tester.pumpAndSettle();
 }
 

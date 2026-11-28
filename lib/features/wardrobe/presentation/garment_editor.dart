@@ -11,8 +11,10 @@ import '../data/capture_settings_repository.dart';
 import '../data/garment_repository.dart';
 import 'garment_classification.dart';
 import 'garment_color_picker.dart';
+import 'garment_editor_body.dart';
 import 'garment_editor_scaffold.dart';
 import 'garment_fields.dart';
+import 'garment_options.dart';
 
 class GarmentEditor extends ConsumerStatefulWidget {
   const GarmentEditor.add(
@@ -45,9 +47,9 @@ class GarmentEditor extends ConsumerStatefulWidget {
 
 class _GarmentEditorState extends ConsumerState<GarmentEditor> {
   GarmentCategory? _category;
-  GarmentCategory? _subtypeFilter;
   String _subtype = '';
   int _formality = 2;
+  bool _formalityEdited = false;
   int _color = defaultGarmentColor;
   int? _secondaryColor;
   GarmentPattern _pattern = GarmentPattern.solid;
@@ -72,7 +74,7 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
       }
       _colorDetection = _detectColor(widget.photo!);
     } else {
-      _category = _subtypeFilter = garment.category;
+      _category = garment.category;
       _subtype = garment.subtype;
       _formality = garment.formality;
       _color = garment.primaryColor;
@@ -105,43 +107,24 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
     await _submit((actions) async {
       await _colorDetection;
       final secondary = _secondaryColor;
-      final secondaryFamily = secondary == null
-          ? null
-          : classifyColor(secondary);
-      final family = classifyColor(_color);
-      final garment = widget.item?.garment;
-      if (garment == null) {
-        await actions.add(
-          GarmentDraft(
-            category: category,
-            subtype: _subtype,
-            formality: _formality,
-            primaryColor: _color,
-            colorFamily: family,
-            secondaryColor: secondary,
-            secondaryColorFamily: secondaryFamily,
-            pattern: _pattern,
-            photoPath: widget.photo!.path,
-            fit: _fit,
-            warmth: _warmth,
-          ),
-        );
-      } else {
-        await actions.update(
-          garment.copyWith(
-            category: category,
-            subtype: _subtype,
-            formality: _formality,
-            primaryColor: _color,
-            colorFamily: family,
-            secondaryColor: secondary,
-            secondaryColorFamily: secondaryFamily,
-            pattern: _pattern,
-            fit: _fit,
-            warmth: _warmth,
-          ),
-        );
-      }
+      await actions.save(
+        GarmentDraft(
+          category: category,
+          subtype: _subtype,
+          formality: _formality,
+          primaryColor: _color,
+          colorFamily: classifyColor(_color),
+          secondaryColor: secondary,
+          secondaryColorFamily: secondary == null
+              ? null
+              : classifyColor(secondary),
+          pattern: _pattern,
+          photoPath: _photoPath,
+          fit: _fit,
+          warmth: _warmth,
+        ),
+        existing: widget.item?.garment,
+      );
     }, 'No se pudo guardar la prenda. Intenta de nuevo.');
   }
 
@@ -176,11 +159,7 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
       if (batch == null) {
         Navigator.pop(context, true);
       } else {
-        batch.advance((
-          category: _category!,
-          subtype: _subtype,
-          formality: _formality,
-        ));
+        batch.advance(_selectedValues);
       }
     } catch (_) {
       if (!mounted) return;
@@ -190,11 +169,16 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
     }
   }
 
+  GarmentDefaults get _selectedValues =>
+      (category: _category!, subtype: _subtype, formality: _formality);
+
+  String get _photoPath => widget.item?.photoPath ?? widget.photo!.path;
+
   @override
   Widget build(BuildContext context) {
     final batch = widget.batch;
     final editing = widget.item != null;
-    final photoPath = widget.item?.photoPath ?? widget.photo!.path;
+    final compact = widget.defaults != null;
     return GarmentEditorScaffold(
       editing: editing,
       busy: _busy,
@@ -205,66 +189,67 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
       onSave: _busy || _samplingPrimary || _category == null
           ? null
           : () => unawaited(_save()),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          GarmentColorPicker(
-            path: photoPath,
-            enabled: !_busy,
-            onPrimary: _setPrimaryColor,
-            onSamplingChanged: (value) =>
-                setState(() => _samplingPrimary = value),
-          ),
-          if (_busy) const LinearProgressIndicator(),
-          const SizedBox(height: 16),
-          GarmentClassification(
-            category: _category,
-            subtypeFilter: _subtypeFilter,
-            subtype: _subtype,
-            formality: _formality,
-            onCategory: _busy
-                ? null
-                : (value) => setState(() {
-                    if (_category != value) _subtype = '';
-                    _category = _subtypeFilter = value;
-                  }),
-            onSubtype: _busy
-                ? null
-                : (category, subtype) => setState(() {
-                    _category = category;
-                    _subtype = subtype ?? '';
-                  }),
-            onFormality: _busy
-                ? null
-                : (value) => setState(() => _formality = value!),
-          ),
-          GarmentAppearance(
-            primary: _color,
-            secondary: _secondaryColor,
-            photoPath: photoPath,
-            pattern: _pattern,
-            onPrimary: _busy ? null : _setPrimaryColor,
-            onSecondary: _busy ? null : _setSecondaryColor,
-            onPattern: _busy
-                ? null
-                : (value) => setState(() => _pattern = value),
-          ),
-          GarmentDetails(
-            fit: _fit,
-            warmth: _warmth,
-            onFitChanged: _busy
-                ? null
-                : (value) => setState(() => _fit = value),
-            onWarmthChanged: _busy
-                ? null
-                : (value) => setState(() => _warmth = value),
-          ),
-          if (editing)
-            TextButton(
-              onPressed: _busy ? null : () => unawaited(_delete()),
-              child: const Text('Eliminar'),
-            ),
-        ],
+      body: GarmentEditorBody(
+        summary: compact ? _selectedValues : null,
+        color: _color,
+        busy: _busy,
+        photo: GarmentColorPicker(
+          path: _photoPath,
+          enabled: !_busy,
+          onPrimary: _setPrimaryColor,
+          onSamplingChanged: (value) =>
+              setState(() => _samplingPrimary = value),
+        ),
+        classification: GarmentClassification(
+          category: _category,
+          subtype: _subtype,
+          onCategory: _busy
+              ? null
+              : (value) => setState(() {
+                  _category = value;
+                  _subtype = '';
+                }),
+          onSubtype: _busy
+              ? null
+              : (category, subtype) => setState(() {
+                  _category = category;
+                  _subtype = subtype ?? '';
+                  final typical = typicalFormalityBySubtype[subtype];
+                  if (!_formalityEdited && typical != null) {
+                    _formality = typical;
+                  }
+                }),
+        ),
+        formality: GarmentFormalityField(
+          value: _formality,
+          onChanged: _busy
+              ? null
+              : (value) => setState(() {
+                  _formality = value;
+                  _formalityEdited = true;
+                }),
+        ),
+        colors: GarmentAppearance(
+          primary: _color,
+          secondary: _secondaryColor,
+          photoPath: _photoPath,
+          onPrimary: _busy ? null : _setPrimaryColor,
+          onSecondary: _busy ? null : _setSecondaryColor,
+        ),
+        pattern: GarmentPatternField(
+          pattern: _pattern,
+          onChanged: _busy ? null : (value) => setState(() => _pattern = value),
+        ),
+        details: GarmentDetails(
+          fit: _fit,
+          warmth: _warmth,
+          initiallyExpanded: compact,
+          onFitChanged: _busy ? null : (value) => setState(() => _fit = value),
+          onWarmthChanged: _busy
+              ? null
+              : (value) => setState(() => _warmth = value),
+        ),
+        onDelete: editing ? () => unawaited(_delete()) : null,
       ),
     );
   }

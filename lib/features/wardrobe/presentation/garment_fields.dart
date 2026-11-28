@@ -12,11 +12,13 @@ class GarmentChoices<T> extends StatelessWidget {
     required this.onChanged,
     this.optional = false,
     this.compactTitle = false,
+    this.trailing,
     super.key,
   });
 
   final String? title;
   final bool compactTitle;
+  final Widget? trailing;
   final Map<T, String> labels;
   final T? value;
   final ValueChanged<T?>? onChanged;
@@ -48,6 +50,7 @@ class GarmentChoices<T> extends StatelessWidget {
                       }
                     },
             ),
+          ?trailing,
         ],
       ),
     ],
@@ -139,16 +142,19 @@ class GarmentDetails extends StatelessWidget {
     required this.warmth,
     required this.onFitChanged,
     required this.onWarmthChanged,
+    this.initiallyExpanded = false,
     super.key,
   });
 
   final Fit? fit;
   final Warmth? warmth;
+  final bool initiallyExpanded;
   final ValueChanged<Fit?>? onFitChanged;
   final ValueChanged<Warmth?>? onWarmthChanged;
 
   @override
   Widget build(BuildContext context) => ExpansionTile(
+    initiallyExpanded: initiallyExpanded,
     tilePadding: EdgeInsets.zero,
     title: const Text('Más detalles'),
     expandedCrossAxisAlignment: CrossAxisAlignment.start,
@@ -176,20 +182,16 @@ class GarmentAppearance extends StatelessWidget {
     required this.primary,
     required this.secondary,
     required this.photoPath,
-    required this.pattern,
     required this.onPrimary,
     required this.onSecondary,
-    required this.onPattern,
     super.key,
   });
 
   final int primary;
   final int? secondary;
   final String photoPath;
-  final GarmentPattern pattern;
   final ValueChanged<int>? onPrimary;
   final ValueChanged<int?>? onSecondary;
-  final ValueChanged<GarmentPattern>? onPattern;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -206,19 +208,30 @@ class GarmentAppearance extends StatelessWidget {
         onChanged: onSecondary,
         onRemove: onSecondary == null ? null : () => onSecondary?.call(null),
       ),
-      GarmentChoices<GarmentPattern>(
-        title: 'Estampado',
-        labels: const {
-          GarmentPattern.solid: 'Liso',
-          GarmentPattern.stripes: 'Rayas',
-          GarmentPattern.graphic: 'Estampado/logo',
-          GarmentPattern.print: 'Print',
-        },
-        value: pattern,
-        onChanged: onPattern == null
-            ? null
-            : (value) => onPattern?.call(value!),
-      ),
     ],
+  );
+}
+
+class GarmentPatternField extends StatelessWidget {
+  const GarmentPatternField({
+    required this.pattern,
+    required this.onChanged,
+    super.key,
+  });
+
+  final GarmentPattern pattern;
+  final ValueChanged<GarmentPattern>? onChanged;
+
+  @override
+  Widget build(BuildContext context) => GarmentChoices<GarmentPattern>(
+    title: 'Estampado',
+    labels: const {
+      GarmentPattern.solid: 'Liso',
+      GarmentPattern.stripes: 'Rayas',
+      GarmentPattern.graphic: 'Estampado/logo',
+      GarmentPattern.print: 'Print',
+    },
+    value: pattern,
+    onChanged: onChanged == null ? null : (value) => onChanged?.call(value!),
   );
 }

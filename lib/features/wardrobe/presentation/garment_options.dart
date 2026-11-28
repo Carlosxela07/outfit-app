@@ -48,6 +48,36 @@ const subtypeLabels = {
   },
 };
 
+const typicalFormalityBySubtype = {
+  'tshirt': 2,
+  'shirt': 3,
+  'polo': 3,
+  'sweatshirt': 1,
+  'blouse': 3,
+  'pants': 3,
+  'jeans': 2,
+  'shorts': 1,
+  'joggers': 1,
+  'skirt': 3,
+  'jacket': 3,
+  'overshirt': 2,
+  'sweater': 3,
+  'vest': 3,
+  'casual_jacket': 2,
+  'coat': 4,
+  'cardigan': 3,
+  'blazer': 4,
+  'sneakers': 2,
+  'boots': 3,
+  'sandals': 1,
+  'loafers': 4,
+  'belt': 2,
+  'cap': 2,
+  'scarf': 2,
+  'watch': 2,
+  'bag': 2,
+};
+
 const colorFamilyLabels = {
   ColorFamily.neutral: 'Neutro',
   ColorFamily.warm: 'Cálido',
