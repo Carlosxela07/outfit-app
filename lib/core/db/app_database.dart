@@ -13,6 +13,10 @@ class Garments extends Table {
   )();
   IntColumn get primaryColor => integer()();
   TextColumn get colorFamily => textEnum<ColorFamily>()();
+  IntColumn get secondaryColor => integer().nullable()();
+  TextColumn get secondaryColorFamily => textEnum<ColorFamily>().nullable()();
+  TextColumn get pattern =>
+      textEnum<GarmentPattern>().withDefault(const Constant('solid'))();
   TextColumn get fit => textEnum<Fit>().nullable()();
   TextColumn get warmth => textEnum<Warmth>().nullable()();
   DateTimeColumn get lastWornAt => dateTime().nullable()();
@@ -49,9 +53,19 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
-  MigrationStrategy get migration =>
-      MigrationStrategy(onCreate: (migrator) => migrator.createAll());
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (migrator) => migrator.createAll(),
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await transaction(() async {
+          await migrator.addColumn(garments, garments.secondaryColor);
+          await migrator.addColumn(garments, garments.secondaryColorFamily);
+          await migrator.addColumn(garments, garments.pattern);
+        });
+      }
+    },
+  );
 }

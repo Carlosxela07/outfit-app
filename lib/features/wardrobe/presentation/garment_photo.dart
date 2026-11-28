@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 class GarmentPhoto extends StatelessWidget {
   const GarmentPhoto(this.path, {super.key, this.cacheWidth});
 
+  static const fit = BoxFit.cover;
+
   final String path;
   final int? cacheWidth;
 
@@ -14,7 +16,7 @@ class GarmentPhoto extends StatelessWidget {
     width: double.infinity,
     height: double.infinity,
     cacheWidth: cacheWidth,
-    fit: BoxFit.cover,
+    fit: fit,
     excludeFromSemantics: true,
     errorBuilder: (context, error, stackTrace) => const Center(
       child: Icon(

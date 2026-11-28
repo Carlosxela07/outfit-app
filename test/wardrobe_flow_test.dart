@@ -112,8 +112,8 @@ class _TestGarmentPhotos extends GarmentPhotos {
   final Directory directory;
 
   @override
-  Future<int> detectColor(String source) async =>
-      dominantColor(File(source).readAsBytesSync());
+  Future<DetectedColors> detectPhotoColors(String source) async =>
+      detectColors(File(source).readAsBytesSync());
 
   @override
   Future<String> save(String id, String source) async =>
