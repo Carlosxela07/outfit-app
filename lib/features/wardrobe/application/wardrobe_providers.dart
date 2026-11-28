@@ -17,6 +17,19 @@ final garmentPhotoPickerProvider =
       );
     });
 
+const maxBatchPhotos = 20;
+
+final garmentMultiPhotoPickerProvider =
+    Provider<Future<List<XFile>> Function()>((ref) {
+      final picker = ImagePicker();
+      return () => picker.pickMultiImage(
+        maxWidth: 1080,
+        maxHeight: 1080,
+        imageQuality: 85,
+        limit: maxBatchPhotos,
+      );
+    });
+
 final garmentPhotosProvider = Provider<GarmentPhotos>(
   (ref) => const GarmentPhotos(),
 );

@@ -6,9 +6,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:outfit_engine/outfit_engine.dart';
 
 import '../application/wardrobe_providers.dart';
+import '../data/garment_repository.dart';
+import 'garment_batch_editor.dart';
 import 'garment_editor.dart';
 import 'garment_options.dart';
 import 'garment_photo.dart';
+
+enum _PhotoSource { camera, gallery, batch }
 
 class WardrobeScreen extends ConsumerStatefulWidget {
   const WardrobeScreen({super.key});
@@ -21,37 +25,43 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
   GarmentCategory? _category;
   bool _adding = false;
 
-  Future<void> _add() async {
+  Future<void> _add([_PhotoSource? initialSource]) async {
     if (_adding) return;
     setState(() => _adding = true);
     try {
-      final source = await showModalBottomSheet<ImageSource>(
-        context: context,
-        builder: (context) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Cámara'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
+      final source =
+          initialSource ??
+          await showModalBottomSheet<_PhotoSource>(
+            context: context,
+            builder: (context) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.photo_camera_outlined),
+                    title: const Text('Cámara'),
+                    onTap: () => Navigator.pop(context, _PhotoSource.camera),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.photo_library_outlined),
+                    title: const Text('Galería'),
+                    onTap: () => Navigator.pop(context, _PhotoSource.gallery),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.collections_outlined),
+                    title: const Text('Varias desde galería'),
+                    onTap: () => Navigator.pop(context, _PhotoSource.batch),
+                  ),
+                ],
               ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Galería'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
-              ),
-            ],
-          ),
-        ),
-      );
+            ),
+          );
       if (!mounted || source == null) return;
-      final photo = await ref.read(garmentPhotoPickerProvider)(source);
-      if (!mounted || photo == null) return;
-      final saved = await Navigator.of(context, rootNavigator: true).push<bool>(
-        MaterialPageRoute(builder: (context) => GarmentEditor.add(photo)),
-      );
-      if (mounted && saved == true) setState(() => _category = null);
+      if (source == _PhotoSource.batch) {
+        await _addBatch();
+      } else {
+        await _addSingle(source);
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -63,6 +73,65 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
     } finally {
       if (mounted) setState(() => _adding = false);
     }
+  }
+
+  Future<void> _addSingle(_PhotoSource source) async {
+    final camera = source == _PhotoSource.camera;
+    final photo = await ref.read(garmentPhotoPickerProvider)(
+      camera ? ImageSource.camera : ImageSource.gallery,
+    );
+    if (!mounted || photo == null) return;
+    final settings = await ref
+        .read(garmentRepositoryProvider)
+        .readCaptureSettings();
+    if (!mounted) return;
+    final saved = await Navigator.of(context, rootNavigator: true).push<bool>(
+      MaterialPageRoute(
+        builder: (context) =>
+            GarmentEditor.add(photo, defaults: settings.defaults),
+      ),
+    );
+    if (!mounted || saved != true) return;
+    setState(() => _category = null);
+    if (camera) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Prenda agregada'),
+          action: SnackBarAction(
+            label: 'Tomar otra',
+            onPressed: () => unawaited(_add(_PhotoSource.camera)),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _addBatch() async {
+    final picked = await ref.read(garmentMultiPhotoPickerProvider)();
+    if (!mounted || picked.isEmpty) return;
+    final settings = await ref
+        .read(garmentRepositoryProvider)
+        .readCaptureSettings();
+    if (!mounted) return;
+    final photos = picked.take(maxBatchPhotos).toList();
+    final saved = await Navigator.of(context, rootNavigator: true).push<int>(
+      MaterialPageRoute(
+        builder: (context) => GarmentBatchEditor(
+          photos: photos,
+          remember: settings.remember,
+          defaults: settings.defaults,
+        ),
+      ),
+    );
+    if (!mounted || saved == null) return;
+    if (saved > 0) setState(() => _category = null);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          saved == 1 ? '1 prenda agregada' : '$saved prendas agregadas',
+        ),
+      ),
+    );
   }
 
   @override

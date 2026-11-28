@@ -8,6 +8,8 @@ import 'package:uuid/uuid.dart';
 import '../../../core/db/app_database.dart';
 import '../../../core/db/app_database_provider.dart';
 
+import 'capture_settings_repository.dart';
+
 final garmentRepositoryProvider = Provider<GarmentRepository>(
   (ref) => GarmentRepository(ref.watch(appDatabaseProvider)),
 );
@@ -75,31 +77,40 @@ class GarmentRepository {
     return row == null ? null : _toItem(row);
   }
 
-  Future<String> add(GarmentDraft draft, {String? id}) async {
-    final garmentId = id ?? _uuid.v4();
-    final now = DateTime.now().toUtc();
-    await _database
-        .into(_database.garments)
-        .insert(
-          GarmentsCompanion.insert(
-            id: garmentId,
-            category: draft.category,
-            subtype: draft.subtype,
-            formality: draft.formality,
-            primaryColor: draft.primaryColor,
-            colorFamily: draft.colorFamily,
-            secondaryColor: Value(draft.secondaryColor),
-            secondaryColorFamily: Value(draft.secondaryColorFamily),
-            pattern: Value(draft.pattern),
-            fit: Value(draft.fit),
-            warmth: Value(draft.warmth),
-            photoPath: draft.photoPath,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
-    return garmentId;
-  }
+  Future<({bool remember, GarmentDefaults? defaults})> readCaptureSettings() =>
+      CaptureSettingsRepository(_database).read();
+
+  Future<String> add(GarmentDraft draft, {String? id}) =>
+      _database.transaction(() async {
+        final garmentId = id ?? _uuid.v4();
+        final now = DateTime.now().toUtc();
+        await _database
+            .into(_database.garments)
+            .insert(
+              GarmentsCompanion.insert(
+                id: garmentId,
+                category: draft.category,
+                subtype: draft.subtype,
+                formality: draft.formality,
+                primaryColor: draft.primaryColor,
+                colorFamily: draft.colorFamily,
+                secondaryColor: Value(draft.secondaryColor),
+                secondaryColorFamily: Value(draft.secondaryColorFamily),
+                pattern: Value(draft.pattern),
+                fit: Value(draft.fit),
+                warmth: Value(draft.warmth),
+                photoPath: draft.photoPath,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
+        await CaptureSettingsRepository(_database).remember((
+          category: draft.category,
+          subtype: draft.subtype,
+          formality: draft.formality,
+        ));
+        return garmentId;
+      });
 
   Future<void> update(Garment garment) async {
     final query = _database.update(_database.garments)

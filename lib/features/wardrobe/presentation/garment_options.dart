@@ -20,10 +20,15 @@ const subtypeLabels = {
     'pants': 'Pantalón',
     'jeans': 'Jeans',
     'shorts': 'Short',
+    'joggers': 'Joggers',
     'skirt': 'Falda',
   },
   GarmentCategory.outerwear: {
     'jacket': 'Chaqueta',
+    'overshirt': 'Sobrecamisa',
+    'sweater': 'Suéter',
+    'vest': 'Chaleco',
+    'casual_jacket': 'Chamarra',
     'coat': 'Abrigo',
     'cardigan': 'Cárdigan',
     'blazer': 'Blazer',
@@ -38,6 +43,7 @@ const subtypeLabels = {
     'belt': 'Cinturón',
     'cap': 'Gorra',
     'scarf': 'Bufanda',
+    'watch': 'Reloj',
     'bag': 'Bolso',
   },
 };

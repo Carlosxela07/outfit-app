@@ -7,17 +7,37 @@ import 'package:outfit_engine/outfit_engine.dart';
 
 import '../../../core/storage/dominant_color.dart';
 import '../application/wardrobe_providers.dart';
+import '../data/capture_settings_repository.dart';
 import '../data/garment_repository.dart';
+import 'garment_classification.dart';
 import 'garment_color_picker.dart';
+import 'garment_editor_scaffold.dart';
 import 'garment_fields.dart';
-import 'garment_options.dart';
 
 class GarmentEditor extends ConsumerStatefulWidget {
-  const GarmentEditor.add(XFile this.photo, {super.key}) : item = null;
-  const GarmentEditor.edit(WardrobeItem this.item, {super.key}) : photo = null;
+  const GarmentEditor.add(
+    XFile this.photo, {
+    this.defaults,
+    this.batch,
+    super.key,
+  }) : item = null;
+
+  const GarmentEditor.edit(WardrobeItem this.item, {super.key})
+    : photo = null,
+      defaults = null,
+      batch = null;
 
   final XFile? photo;
   final WardrobeItem? item;
+  final GarmentDefaults? defaults;
+  final ({
+    int position,
+    int total,
+    Future<DetectedColors?> colors,
+    ValueChanged<GarmentDefaults?> advance,
+    VoidCallback exit,
+  })?
+  batch;
 
   @override
   ConsumerState<GarmentEditor> createState() => _GarmentEditorState();
@@ -25,6 +45,7 @@ class GarmentEditor extends ConsumerStatefulWidget {
 
 class _GarmentEditorState extends ConsumerState<GarmentEditor> {
   GarmentCategory? _category;
+  GarmentCategory? _subtypeFilter;
   String _subtype = '';
   int _formality = 2;
   int _color = defaultGarmentColor;
@@ -43,9 +64,15 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
     super.initState();
     final garment = widget.item?.garment;
     if (garment == null) {
+      final defaults = widget.defaults;
+      if (defaults != null) {
+        _category = defaults.category;
+        _subtype = defaults.subtype;
+        _formality = defaults.formality;
+      }
       _colorDetection = _detectColor(widget.photo!);
     } else {
-      _category = garment.category;
+      _category = _subtypeFilter = garment.category;
       _subtype = garment.subtype;
       _formality = garment.formality;
       _color = garment.primaryColor;
@@ -58,10 +85,10 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
 
   Future<void> _detectColor(XFile photo) async {
     try {
-      final colors = await ref
-          .read(garmentPhotosProvider)
-          .detectPhotoColors(photo.path);
-      if (!mounted) return;
+      final colors =
+          await (widget.batch?.colors ??
+              ref.read(garmentPhotosProvider).detectPhotoColors(photo.path));
+      if (!mounted || colors == null) return;
       setState(() {
         if (!_colorChosen) _color = colors.primary;
         if (!_secondaryChosen) _secondaryColor = colors.secondary;
@@ -129,23 +156,7 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
   });
 
   Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Eliminar prenda?'),
-        content: const Text('Se eliminará también su foto.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
+    final confirmed = await confirmGarmentDeletion(context);
     if (!mounted || confirmed != true || _busy) return;
     await _submit(
       (actions) => actions.delete(widget.item!),
@@ -160,7 +171,17 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
     setState(() => _busy = true);
     try {
       await operation(ref.read(wardrobeActionsProvider));
-      if (mounted) Navigator.pop(context, true);
+      if (!mounted) return;
+      final batch = widget.batch;
+      if (batch == null) {
+        Navigator.pop(context, true);
+      } else {
+        batch.advance((
+          category: _category!,
+          subtype: _subtype,
+          formality: _formality,
+        ));
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -171,95 +192,79 @@ class _GarmentEditorState extends ConsumerState<GarmentEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final subtypes = subtypeLabels[_category];
+    final batch = widget.batch;
     final editing = widget.item != null;
     final photoPath = widget.item?.photoPath ?? widget.photo!.path;
-    return PopScope(
-      canPop: !_busy,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(editing ? 'Editar prenda' : 'Agregar prenda'),
-          actions: [
+    return GarmentEditorScaffold(
+      editing: editing,
+      busy: _busy,
+      position: batch?.position,
+      total: batch?.total,
+      onExit: batch?.exit,
+      onSkip: batch == null ? null : () => batch.advance(null),
+      onSave: _busy || _samplingPrimary || _category == null
+          ? null
+          : () => unawaited(_save()),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          GarmentColorPicker(
+            path: photoPath,
+            enabled: !_busy,
+            onPrimary: _setPrimaryColor,
+            onSamplingChanged: (value) =>
+                setState(() => _samplingPrimary = value),
+          ),
+          if (_busy) const LinearProgressIndicator(),
+          const SizedBox(height: 16),
+          GarmentClassification(
+            category: _category,
+            subtypeFilter: _subtypeFilter,
+            subtype: _subtype,
+            formality: _formality,
+            onCategory: _busy
+                ? null
+                : (value) => setState(() {
+                    if (_category != value) _subtype = '';
+                    _category = _subtypeFilter = value;
+                  }),
+            onSubtype: _busy
+                ? null
+                : (category, subtype) => setState(() {
+                    _category = category;
+                    _subtype = subtype ?? '';
+                  }),
+            onFormality: _busy
+                ? null
+                : (value) => setState(() => _formality = value!),
+          ),
+          GarmentAppearance(
+            primary: _color,
+            secondary: _secondaryColor,
+            photoPath: photoPath,
+            pattern: _pattern,
+            onPrimary: _busy ? null : _setPrimaryColor,
+            onSecondary: _busy ? null : _setSecondaryColor,
+            onPattern: _busy
+                ? null
+                : (value) => setState(() => _pattern = value),
+          ),
+          GarmentDetails(
+            fit: _fit,
+            warmth: _warmth,
+            onFitChanged: _busy
+                ? null
+                : (value) => setState(() => _fit = value),
+            onWarmthChanged: _busy
+                ? null
+                : (value) => setState(() => _warmth = value),
+          ),
+          if (editing)
             TextButton(
-              onPressed: _busy || _samplingPrimary || _category == null
-                  ? null
-                  : () => unawaited(_save()),
-              child: const Text('Guardar'),
+              onPressed: _busy ? null : () => unawaited(_delete()),
+              child: const Text('Eliminar'),
             ),
-          ],
-        ),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            GarmentColorPicker(
-              path: photoPath,
-              enabled: !_busy,
-              onPrimary: _setPrimaryColor,
-              onSamplingChanged: (value) =>
-                  setState(() => _samplingPrimary = value),
-            ),
-            if (_busy) const LinearProgressIndicator(),
-            const SizedBox(height: 16),
-            GarmentChoices<GarmentCategory>(
-              title: 'Categoría',
-              labels: categoryLabels,
-              value: _category,
-              onChanged: _busy
-                  ? null
-                  : (value) => setState(() {
-                      if (_category != value) _subtype = '';
-                      _category = value;
-                    }),
-            ),
-            if (subtypes != null)
-              GarmentChoices<String>(
-                title: 'Subtipo',
-                labels: subtypes,
-                value: _subtype,
-                optional: true,
-                onChanged: _busy
-                    ? null
-                    : (value) => setState(() => _subtype = value ?? ''),
-              ),
-            GarmentChoices<int>(
-              title: 'Formalidad',
-              labels: {
-                for (var i = 0; i < formalityLabels.length; i++)
-                  i + 1: formalityLabels[i],
-              },
-              value: _formality,
-              onChanged: _busy
-                  ? null
-                  : (value) => setState(() => _formality = value!),
-            ),
-            GarmentAppearance(
-              primary: _color,
-              secondary: _secondaryColor,
-              photoPath: photoPath,
-              pattern: _pattern,
-              onPrimary: _busy ? null : _setPrimaryColor,
-              onSecondary: _busy ? null : _setSecondaryColor,
-              onPattern: _busy
-                  ? null
-                  : (value) => setState(() => _pattern = value),
-            ),
-            GarmentDetails(
-              fit: _fit,
-              warmth: _warmth,
-              onFitChanged: _busy
-                  ? null
-                  : (value) => setState(() => _fit = value),
-              onWarmthChanged: _busy
-                  ? null
-                  : (value) => setState(() => _warmth = value),
-            ),
-            if (editing)
-              TextButton(
-                onPressed: _busy ? null : () => unawaited(_delete()),
-                child: const Text('Eliminar'),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }

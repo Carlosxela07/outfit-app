@@ -11,10 +11,12 @@ class GarmentChoices<T> extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.optional = false,
+    this.compactTitle = false,
     super.key,
   });
 
-  final String title;
+  final String? title;
+  final bool compactTitle;
   final Map<T, String> labels;
   final T? value;
   final ValueChanged<T?>? onChanged;
@@ -24,7 +26,13 @@ class GarmentChoices<T> extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(title, style: Theme.of(context).textTheme.titleMedium),
+      if (title case final label?)
+        Text(
+          label,
+          style: compactTitle
+              ? Theme.of(context).textTheme.labelMedium
+              : Theme.of(context).textTheme.titleMedium,
+        ),
       Wrap(
         spacing: 8,
         children: [
